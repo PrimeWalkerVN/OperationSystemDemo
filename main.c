@@ -21,7 +21,8 @@ int copycomand(char **arg,char **history, int nLine){
 void printhistory(char ** history,int nLine)
 {
     for (int i = 0; i <= nLine; ++i) {
-        printf("%s ",*(history+i));
+        if(*(history+i)!=NULL)
+            printf("%s ",*(history+i));
     }
     printf("\n");
 }
@@ -55,7 +56,7 @@ int main(void)
 
         while (strcmp(input, "") != 0) {
             *(args + nLine) = (char *) malloc(MAXLINE / 2 + 1);
-            sscanf(input, "%[^ \n]", *(args + nLine));
+            sscanf(input, "%[^ \n\t]", *(args + nLine));
             input += strlen(*(args + nLine));
             while(*input==' ' || *input=='\t' || *input=='\n')
                 input++;
@@ -103,7 +104,11 @@ int main(void)
             break;
         } else
             if (pid == 0) {
-                execvp(history[0], history);
+                if(execvp(history[0], history))
+                {
+                    printf("Invalid command");
+                    return 1;
+                };
             } else
                 if (waitProcess) {
                     wait(NULL);
