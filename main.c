@@ -6,50 +6,114 @@
 #include <malloc.h>
 
 #define MAXLINE 80
+
+
+int copycomand(char **arg,char **history, int nLine){
+
+    for (int i = 0; i < nLine; ++i) {
+
+        *(history+i)=strdup(*(arg+i));
+    }
+    *(history+nLine)=NULL;
+
+};
+
+void printhistory(char ** history,int nLine)
+{
+    for (int i = 0; i <= nLine; ++i) {
+        printf("%s ",*(history+i));
+    }
+    printf("\n");
+}
+
+
+
 int main(void)
 {
     char **args = (char**)malloc(MAXLINE/2 + 1);
+    char **history = (char**)malloc(MAXLINE/2 +1);
 
-    int shouldRun = 1;
 
-    while (shouldRun) {
+    while (1) {
+        int waitProcess = 1;
         printf("osh>");
-        char *input = (char *) malloc(MAXLINE);
+        char *input = (char*) malloc(MAXLINE);
+
         fgets(input, MAXLINE, stdin);
-        //sscanf(stdin,%[^ \n],input)
+
+        if(!input)
+        {
+            printf("input error\n");
+            continue;
+        }
+
+        while(*input==' ' || *input=='\t')
+            input++;
+
         int nLine = 0;
+
+
         while (strcmp(input, "") != 0) {
             *(args + nLine) = (char *) malloc(MAXLINE / 2 + 1);
             sscanf(input, "%[^ \n]", *(args + nLine));
             input += strlen(*(args + nLine));
-            input++;
+            while(*input==' ' || *input=='\t' || *input=='\n')
+                input++;
             nLine++;
         }
 
-        //GIAI QUYET NHIEU KHOANG TRAG`
-        //...
+        if(strcmp(args[0],"exit")==0)
+        {
+            free(args);
+            return 0;
+        }
 
-        *(args+nLine)=(char*)malloc(80);
-        *(args+nLine)=NULL;
+        if (strcmp(args[nLine-1], "&") ==0 )
+        {
+            waitProcess=0;
+            free(args[nLine-1]);
+            args[nLine-1]=NULL;
+            nLine--;
+            copycomand(args,history,nLine);
+            nLine++;
 
-        execvp(args[0], args);
+        }else {
+            // Tham so cuoi cung luon la NULL
+            if(strcmp(args[0],"!!")==0)
+            {
+                if(history[0]==NULL)
+                    printf("No commands in history.");
+                else
+                printhistory(history,nLine);
 
-        int wait = 1;
+            } else {
+                *(args + nLine) = (char *) malloc(80);
+                *(args + nLine) = NULL;
+                //
+                copycomand(args, history, nLine);
+            }
+        }
 
-        pid_t pid = 0;
 
+        printf("\n");
+        pid_t pid;
         pid = fork();
         if (pid < 0) {
             printf("error when create child process\n");
-        } else {
+            break;
+        } else
             if (pid == 0) {
-                execvp(args[0], args);
+                execvp(history[0], history);
             } else
-                printf(">0\n");
-        }
-        break;
-
+                if (waitProcess) {
+                    wait(NULL);
+                }
+                printf("\n");
 
     }
+
+
+    free(args);
+    free(history);
     return 0;
 }
