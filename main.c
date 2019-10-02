@@ -8,6 +8,8 @@
 #define MAXLINE 80
 
 
+//functions
+
 int copycomand(char **arg,char **history, int nLine){
 
     for (int i = 0; i < nLine; ++i) {
@@ -15,8 +17,9 @@ int copycomand(char **arg,char **history, int nLine){
         *(history+i)=strdup(*(arg+i));
     }
     *(history+nLine)=NULL;
+    return 1;
+}
 
-};
 
 void printhistory(char ** history,int nLine)
 {
@@ -28,6 +31,73 @@ void printhistory(char ** history,int nLine)
 }
 
 
+int inputString(char *input){
+    fgets(input, MAXLINE, stdin);
+
+    if(!input)
+    {
+        printf("input error\n");
+        return 0;
+    }
+
+    while(*input==' ' || *input=='\t')
+        input++;
+
+    return 1;
+}
+
+
+int Module1(char* input ,char ** args, char**history,int  *waitProcess )
+{
+
+    int nLine = 0;
+
+    while (strcmp(input, "") != 0) {
+        *(args + nLine) = (char *) malloc(MAXLINE / 2 + 1);
+        sscanf(input, "%[^ \n\t]", *(args + nLine));
+        input += strlen(*(args + nLine));
+        while(*input==' ' || *input=='\t' || *input=='\n')
+            input++;
+        nLine++;
+    }
+
+    if(strcmp(args[0],"exit")==0)
+    {
+        free(args);
+        return 0;
+    }
+
+    if (strcmp(args[nLine-1], "&") ==0 )
+    {
+        *waitProcess=0;
+        free(args[nLine-1]);
+        args[nLine-1]=NULL;
+        nLine--;
+        copycomand(args,history,nLine);
+        nLine++;
+
+    }else {
+        // Tham so cuoi cung luon la NULL
+        if(strcmp(args[0],"!!")==0)
+        {
+            if(history[0]==NULL)
+                printf("No commands in history.");
+            else
+                printhistory(history,nLine);
+
+        } else {
+            *(args + nLine) = (char *) malloc(80);
+            *(args + nLine) = NULL;
+            //
+            copycomand(args, history, nLine);
+        }
+    }
+    return 1;
+}
+
+
+
+// main program
 
 int main(void)
 {
@@ -35,67 +105,24 @@ int main(void)
     char **history = (char**)malloc(MAXLINE/2 +1);
 
 
+    //start program
     while (1) {
         int waitProcess = 1;
         printf("osh>");
         char *input = (char*) malloc(MAXLINE);
 
-        fgets(input, MAXLINE, stdin);
+        if(inputString(input)==0) continue;// enter string from keyboard
 
-        if(!input)
-        {
-            printf("input error\n");
-            continue;
-        }
-
-        while(*input==' ' || *input=='\t')
-            input++;
-
-        int nLine = 0;
+        if(Module1(input,args,history, &waitProcess)==0) // 1 - Executing command
+            return 0;                                    // 2 - History feature
 
 
-        while (strcmp(input, "") != 0) {
-            *(args + nLine) = (char *) malloc(MAXLINE / 2 + 1);
-            sscanf(input, "%[^ \n\t]", *(args + nLine));
-            input += strlen(*(args + nLine));
-            while(*input==' ' || *input=='\t' || *input=='\n')
-                input++;
-            nLine++;
-        }
-
-        if(strcmp(args[0],"exit")==0)
-        {
-            free(args);
-            return 0;
-        }
-
-        if (strcmp(args[nLine-1], "&") ==0 )
-        {
-            waitProcess=0;
-            free(args[nLine-1]);
-            args[nLine-1]=NULL;
-            nLine--;
-            copycomand(args,history,nLine);
-            nLine++;
-
-        }else {
-            // Tham so cuoi cung luon la NULL
-            if(strcmp(args[0],"!!")==0)
-            {
-                if(history[0]==NULL)
-                    printf("No commands in history.");
-                else
-                printhistory(history,nLine);
-
-            } else {
-                *(args + nLine) = (char *) malloc(80);
-                *(args + nLine) = NULL;
-                //
-                copycomand(args, history, nLine);
-            }
-        }
-
-
+         /*
+             After reading user input, the steps are:
+            (1) fork a child process using fork()
+            (2) the child process will invoke execvp()
+            (3) parent will invoke wait() unless command included &
+         */
         printf("\n");
         pid_t pid;
         pid = fork();
@@ -118,6 +145,7 @@ int main(void)
     }
 
 
+    // free memory
     free(args);
     free(history);
     return 0;
