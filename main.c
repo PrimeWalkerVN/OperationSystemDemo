@@ -77,7 +77,7 @@ int Module1(char* input ,char ** args, char**history,int  *waitProcess )
         nLine++;
 
     }else {
-        // Tham so cuoi cung luon la NULL
+        // Tham so cuoi cung luon la NULL ???????????????????????? la sao????????
         if(strcmp(args[0],"!!")==0)
         {
             if(history[0]==NULL)
@@ -97,21 +97,19 @@ int Module1(char* input ,char ** args, char**history,int  *waitProcess )
 
 
 
-// main program
+
 
 int main(void)
 {
     char **args = (char**)malloc(MAXLINE/2 + 1);
     char **history = (char**)malloc(MAXLINE/2 +1);
 
-
-    //start program
     while (1) {
         int waitProcess = 1;
         printf("osh>");
         char *input = (char*) malloc(MAXLINE);
 
-        if(inputString(input)==0) continue;// enter string from keyboard
+        if(inputString(input)==0) continue; //enter string from keyboard
 
         if(Module1(input,args,history, &waitProcess)==0) // 1 - Executing command
             return 0;                                    // 2 - History feature
