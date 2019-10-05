@@ -1,0 +1,8 @@
+total 68
+-rwxrwxr-x 1 trungtien trungtien 13072 Thg 1  5 22:47 ahihi
+-rw-rw-r-- 1 trungtien trungtien  5913 Thg 1  5 22:56 ahihi.c
+-rw-rw-r-- 1 trungtien trungtien  4152 Thg 1  5 22:57 ahihi.o
+-rw-rw-r-- 1 trungtien trungtien   437 Thg 1  5 22:58 data.txt
+-rwxrwxr-x 1 trungtien trungtien 13632 Thg 1  5 22:57 main
+-rw-r--r-- 1 trungtien trungtien  4659 Thg 1  5 22:57 main.c
+-rw-rw-r-- 1 trungtien trungtien  5168 Thg 1  5 22:57 main.o

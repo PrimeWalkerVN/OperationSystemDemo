@@ -11,14 +11,22 @@
 int isPipeCmd(char *inputCmd);  //Check whether an input cmd is a pipe cmd.
 int executePipeCmd(char *inputCmd); //Final module, execute the passed pipe cmd. Return values are similar to those of execvp() syscall
 char* strStandardize(char* s);  //Utility, standardize given string. Return a new string, the original string is modified.
-char** strTokenizer(char *s); //Tokenizer the string into seperate parts. In this project, I do that with the default delim "|". Returns a 2d pointer, each pointers points to a char*, or a string
+char** strTokenizer(char *s, char *delim); //Tokenizer the string into seperate parts by the delim deliminater. Returns a 2d pointer, each pointers points to a char*, or a string
 int execOneSeperateCmd(char *inputCmd); //Execute one command, e.g: ls -l, dir, fdisk -l,... Return values are similar to those of execvp() syscall.
 
 
-int main(void){
-  char s[] = "cat ahihi.c | less";
-  executePipeCmd(s);
-}
+// int main(void){
+//   char s[] = "ls -l | less";
+//   executePipeCmd(s);
+
+//   // char s[] = "cat ahihi.c";
+//   // execOneSeperateCmd(s);
+
+//   // char **args = (char**)malloc(2);
+//   // *args = strdup("ls");
+//   // *(args + 1) = strdup("-l");
+//   // execvp(*args, args);
+// }
 
 
 int isPipeCmd(char *inputCmd){
@@ -32,7 +40,10 @@ int isPipeCmd(char *inputCmd){
 
 
 int executePipeCmd(char *inputCmd){
-  char **twoSeperateCmd = strTokenizer(inputCmd); //Tokenize given string into seperate commands, with the delim is "|"
+  strStandardize(inputCmd);
+
+  char delim[] = "|";
+  char **twoSeperateCmd = strTokenizer(inputCmd, delim); //Tokenize given string into seperate commands, with the delim is "|"
 
   int fds[2];   //File descriptors
   pipe(fds);    //Link these 2 fds, fds[1] is the write ends, fds[0] is the read ends. After this syscall, 2 ends (fds) are linked. We will use dup2 to output the result of a commands to fds[0] instead of STDOUT_FILENO and also another dup2 to use fds[1] as the input stream instead of STDIN_FILENO. As 2 ends are linked, the command whose result is writen to the write ends will served as the input for the command which use the read end as the input stream.
@@ -41,16 +52,37 @@ int executePipeCmd(char *inputCmd){
   pid = fork(); //Create 2 process, the child will run the first command, its counterpart, the parent, will run the second command
 
   if(pid == 0){ //Deal with the child piocess
-    dup2(fds[1], STDOUT_FILENO);  //Redirect the output stream to fds[1]
+    int d = open("data.txt", O_RDWR);
+    dup2(d, STDOUT_FILENO);  //Redirect the output stream to fds[1]
 
-    //Execute the command
-    //The command which is executed will output to the respective file description
+    // Execute the command
+    // The command which is executed will output to the respective file description
     execOneSeperateCmd(*twoSeperateCmd);
+
+    // int fd[2];
+    // pipe(fd);
+
+    // dup2(fd[1], STDOUT_FILENO);
+
+    // char *args1[] = {"cat", "ahihi.c", NULL};
+    // execvp(*args1, args1);
+
+    // pid_t r = fork();
+    // if(r == 0){
+    //   dup2(fd[0], STDIN_FILENO);
+
+    //   char *args2[] = {"less", NULL};
+    //   execvp(*args2, args2);
+    // }
+    // else if(r > 0){
+
+    // }
   }
   else if(pid > 0){ //Deal with the parent process
     wait(NULL);   //Wait for the child to complete as we need the output of that command in order to have it served as the input for the second one
 
-    dup2(fds[0], STDIN_FILENO);   //Redirect the input stream to fds[0], which is the read ends
+    int d = open("data.txt", O_RDWR);
+    dup2(d, STDIN_FILENO);   //Redirect the input stream to fds[0], which is the read ends
 
     //Execute the command. This command will retrieve input from the respective file descriptor.
     execOneSeperateCmd(*(twoSeperateCmd + 1));
@@ -91,48 +123,52 @@ char* strStandardize(char* s){
 }
 
 
-char** strTokenizer(char *s){
-  char **ret = (char**)malloc(2); //The result will be stored in a 2d arr, each arr is a sting
-  char delim[] = "|";   //For this project only, I specify the delim with the character '|'
-  *ret = strdup(strtok(s, delim));
-  *(ret + 1) = strdup(strtok(NULL, delim));
-  strStandardize(*ret); //if we pass "ls -l | more", *ret will be "ls -l ", we have to delete the last space. The same as *(ret + 1)
-  strStandardize(*(ret + 1));
+char** strTokenizer(char *s, char *delim){
+  int nTokens = 1;   //Are there any string that has 0 token? Every string has at least 1 token
+  for(int i = 0; i < strlen(s); i++){
+    if(s[i] == *delim){
+      nTokens++;
+    }
+  }
+
+  char **ret = (char**)malloc(nTokens); //The result will be stored in a 2d arr of nTokens elements, each arr is a sting
+
+  *ret = strdup(strtok(s, delim));  //The first token must be split like this,
+  strStandardize(*ret); //if we pass "ls -l | more", *ret will be "ls -l ", we have to delete the last space. The same as *(ret + 1),...
+
+  //From the seconde element, the strtok function should be called with the first param is NULL. For more info, https://www.codingame.com/playgrounds/14213/how-to-play-with-strings-in-c/string-split
+  for(int i = 1; i < nTokens; i++){
+    *(ret + i) = strdup(strtok(NULL, delim));
+    strStandardize(*(ret + i));
+  }
   return ret;
 }
 
 
 int execOneSeperateCmd(char *inputCmd){
-  int nLine = 0;
-  char **args = (char**)malloc(MAX_SIZE_LENGTH / 2 + 1);  //Array of arguments of the command, including the command itself. Each pointers points to a char*
+  strStandardize(inputCmd);
 
-
-  //Read each args to the args pointer.
-  while (strcmp(inputCmd, "") != 0) {
-    *(args + nLine) = (char*) malloc(MAX_SIZE_LENGTH / 2 + 1);
-    sscanf(inputCmd, "%[^ \n\t]", *(args + nLine));  //Read untils the pointer reach a \n or \t
-    inputCmd += strlen(*(args + nLine));
-    while(*inputCmd==' ' || *inputCmd=='\t' || *inputCmd=='\n')
-        inputCmd++;   //Skip the pointer to 1 unit if it reachs one of the above character
-    nLine++;  //Move to the next pointer
-  }
-
+  //Split the inputCmd into seperate part (seperate args), using the strTokenizer() with the delim is " ".
+  //ex, with inputCmd = "ls -l", we have a 2d pointer contain 2 1d pointer, each 1d pointer points to a string, each string alternatively is "ls" and -l
+  char delim[] = " ";
+  char **args = strTokenizer(inputCmd, delim);
 
   //Create process and execute the command, as explained in the executePipeCmd() function
-  pid_t pid;
-  pid = fork();
-  if (pid < 0) {
-    printf("Error when create child process\n");
-  } 
-  else {
-    if (pid == 0) {
-      if(execvp(*args, args)) {
-        printf("Invalid command");
-        return 1;
-      }
-    }
-    else {
-      wait(NULL); //Wait for the child to complete as we need the output of that command in order to have it served as the input for the second one
-    }
-  }
+  // pid_t pid;
+  // pid = fork();
+  // if (pid < 0) {
+  //   return -1;
+  // } 
+  // else {
+  //   if (pid == 0) {
+  //     if(execvp(*args, args)) {
+  //       return -1;
+  //     }
+  //   }
+  //   else {
+  //     wait(NULL); //Wait for the child to complete as we need the output of that command in order to have it served as the input for the second one
+  //   }
+  // }
+
+  execvp(*args, args);
 }
