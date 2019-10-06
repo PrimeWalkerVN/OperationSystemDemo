@@ -14,6 +14,11 @@ char* strStandardize(char* s);  //Utility, standardize given string. Return a ne
 char** strTokenizer(char *s, char *delim); //Tokenizer the string into seperate parts by the delim deliminater. Returns a 2d pointer, each pointers points to a char*, or a string
 int execOneSeperateCmd(char *inputCmd); //Execute one command, e.g: ls -l, dir, fdisk -l,... Return values are similar to those of execvp() syscall.
 
+int isRedirect(char *inputCmd); // Check redirect input. Return 1 if it's redirect command and vice versa
+char* redirectSign(char **args, int nLine, int *index); // Get sign and index of redirect. Return sign and change value of index
+void redirectHandle(char *inputCmd); // Handle redirect
+void executeComandRedirectInputOutput(char **args, int nLine, char *sign, int index); // execute redirect
+
 
 // int main(void){
 //   char s[] = "ls -l | less";
@@ -171,4 +176,113 @@ int execOneSeperateCmd(char *inputCmd){
   // }
 
   execvp(*args, args);
+}
+
+
+
+int isRedirect(char *inputCmd)
+{
+  for(int i = 0;i<strlen(inputCmd); i++)
+  {
+    if((*(inputCmd + i) == '>' || *(inputCmd + i) == '<'))
+    {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+char* redirectSign(char **args, int nLine, int *index)
+{
+    char *sign = (char*)malloc(MAX_SIZE_LENGTH/2 + 1);
+
+    for (int i = 0; i < nLine; i++)
+    {
+        if((sign = strstr(args[i], "<")) || (sign = strstr(args[i], ">")))
+        {
+            *index = i;
+            return sign;
+        }
+    }    
+}
+
+void redirectHandle(char *inputCmd)
+{
+  strStandardize(inputCmd);
+
+  int line = 0;
+
+  char **args = (char**)malloc(MAX_SIZE_LENGTH/2 + 1);
+
+  while (strcmp(inputCmd, "") != 0) 
+  {
+      *(args + line) = (char *) malloc(MAX_SIZE_LENGTH / 2 + 1);
+      sscanf(inputCmd, "%[^ \n\t]", *(args + line));
+      inputCmd += strlen(*(args + line));
+      
+      while(*inputCmd == ' ' || *inputCmd == '\t' || *inputCmd == '\n')
+      {
+          inputCmd++;
+      }
+
+      line++;
+  }
+
+  int index;
+  char *sign;
+
+  sign = redirectSign(args, line, &index);
+
+  executeComandRedirectInputOutput(args, line, sign, index);
+}
+
+
+void executeComandRedirectInputOutput(char **args, int nLine, char *sign, int index)
+{
+    char **dup = (char**)malloc(MAX_SIZE_LENGTH/2 + 1);         // Duplicate args
+    int n = 0;
+    
+    for (int i = 0; i < nLine; i++)
+    {
+        *(dup + i) = (char *) malloc(MAX_SIZE_LENGTH / 2 + 1);
+        strcpy(*(dup + i), args[i]);
+    }
+
+    *(dup + nLine) = (char *) malloc(MAX_SIZE_LENGTH / 2 + 1);
+    *(dup + index) = NULL;
+
+    int fd;
+
+    if(strcmp(sign , "<") == 0)                         // Neu sign la input
+    {
+        if((fd = open(args[index + 1], O_RDONLY)) < 0)              // open return -1 neu co loi xay ra
+        {
+            printf("Failed to open %s", args[index + 1]);
+            return;
+        }
+        
+        dup2(fd, STDIN_FILENO);
+        
+    }
+    else                                            // Neu sign la output
+    {
+       //0666 permission read/write file
+        if((fd = open(args[index + 1], O_WRONLY | O_TRUNC | O_CREAT, 0666)) < 0)              // open return -1 neu co loi xay ra
+        {
+            printf("Failed to open %s", args[index + 1]);
+        }
+
+        dup2(fd, STDOUT_FILENO);
+    }
+
+    close(fd);
+    
+    if(execvp(dup[0],dup) < 0)        
+    {
+      printf("Error!\n");
+    }
+
+  free(sign);
+  free(args);
+  free(dup);
 }

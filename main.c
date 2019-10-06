@@ -170,7 +170,7 @@ int main(void){
                 runSimpleCmd(lastCmd);
             }
             else{
-                printf("No history found\n");
+                printf("No history found!\n");
             }
             continue;
         }
@@ -198,7 +198,10 @@ void runSimpleCmd(char *inputCmd){
             executePipeCmd(inputCmd);
         }
 
-        //TODO: Add your case here
+        if(isRedirect(inputCmd))
+        {
+            redirectHandle(inputCmd);
+        }
 
         if(execOneSeperateCmd(inputCmd) == -1){
             printf("%s\n", "Invalid cmd");
