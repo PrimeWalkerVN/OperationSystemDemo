@@ -15,18 +15,18 @@ char** strTokenizer(char *s, char *delim); //Tokenizer the string into seperate 
 int execOneSeperateCmd(char *inputCmd); //Execute one command, e.g: ls -l, dir, fdisk -l,... Return values are similar to those of execvp() syscall.
 
 
-// int main(void){
-//   char s[] = "ls -l | less";
-//   executePipeCmd(s);
+int main(void){
+  char s[] = "ls -l | less";
+  executePipeCmd(s);
 
-//   // char s[] = "cat ahihi.c";
-//   // execOneSeperateCmd(s);
+  // char s[] = "cat ahihi.c";
+  // execOneSeperateCmd(s);
 
-//   // char **args = (char**)malloc(2);
-//   // *args = strdup("ls");
-//   // *(args + 1) = strdup("-l");
-//   // execvp(*args, args);
-// }
+  // char **args = (char**)malloc(2);
+  // *args = strdup("ls");
+  // *(args + 1) = strdup("-l");
+  // execvp(*args, args);
+}
 
 
 int isPipeCmd(char *inputCmd){
@@ -52,12 +52,20 @@ int executePipeCmd(char *inputCmd){
   pid = fork(); //Create 2 process, the child will run the first command, its counterpart, the parent, will run the second command
 
   if(pid == 0){ //Deal with the child piocess
-    int d = open("data.txt", O_RDWR);
-    dup2(d, STDOUT_FILENO);  //Redirect the output stream to fds[1]
+    // int d = open("data.txt", O_RDWR);
+    // dup2(d, STDOUT_FILENO);  //Redirect the output stream to fds[1]
 
     // Execute the command
     // The command which is executed will output to the respective file description
+    // // execOneSeperateCmd(*twoSeperateCmd);
+
+
+
+    close(fds[0]);
+    dup2(fds[1], STDOUT_FILENO);
     execOneSeperateCmd(*twoSeperateCmd);
+
+
 
     // int fd[2];
     // pipe(fd);
@@ -81,10 +89,17 @@ int executePipeCmd(char *inputCmd){
   else if(pid > 0){ //Deal with the parent process
     wait(NULL);   //Wait for the child to complete as we need the output of that command in order to have it served as the input for the second one
 
-    int d = open("data.txt", O_RDWR);
-    dup2(d, STDIN_FILENO);   //Redirect the input stream to fds[0], which is the read ends
+    // int d = open("data.txt", O_RDWR);
+    // dup2(d, STDIN_FILENO);   //Redirect the input stream to fds[0], which is the read ends
 
-    //Execute the command. This command will retrieve input from the respective file descriptor.
+    // //Execute the command. This command will retrieve input from the respective file descriptor.
+    // execOneSeperateCmd(*(twoSeperateCmd + 1));
+
+
+
+
+    close(fds[1]);
+    dup2(fds[0], STDIN_FILENO);
     execOneSeperateCmd(*(twoSeperateCmd + 1));
   }
   else{
